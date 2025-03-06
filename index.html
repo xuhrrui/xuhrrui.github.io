@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>随机人生模拟器</title>
+    <style>
+      body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f9;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    height: 100vh;
+    margin: 0;
+}
+
+.container {
+    background-color: #fff;
+    padding: 20px;
+    border-radius: 8px;
+    box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+    text-align: center;
+}
+
+h1 {
+    color: #333;
+}
+
+.description {
+    color: #666;
+    margin-bottom: 20px;
+}
+
+form {
+    margin-bottom: 20px;
+}
+
+input[type="date"] {
+    padding: 8px;
+    border: 1px solid #ccc;
+    border-radius: 4px;
+    margin-right: 10px;
+}
+
+input[type="submit"] {
+    padding: 8px 16px;
+    background-color: #007BFF;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+input[type="submit"]:hover {
+    background-color: #0056b3;
+}
+
+#loading {
+    margin-top: 20px;
+}
+
+.spinner {
+    border: 4px solid rgba(0, 0, 0, 0.1);
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    border-top-color: #007BFF;
+    animation: spin 1s ease-in-out infinite;
+    margin: 10px auto;
+}
+
+@keyframes spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+#lifeTrajectory {
+    margin-top: 20px;
+}
+
+#resetButton {
+    margin-top: 20px;
+    padding: 8px 16px;
+    background-color: #dc3545;
+    color: #fff;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+}
+
+#resetButton:hover {
+    background-color: #c82333;
+}
+    </style>
+</head>
+
+<body>
+    <div class="container">
+        <h1>随机人生模拟器</h1>
+        <p class="description">想知道在平行宇宙中你的人生会是怎样的吗？输入你的生日，让我们一起探索吧！</p>
+        <form id="birthdayForm">
+            <label for="birthday">请输入你的生日 (YYYY-MM-DD):</label>
+            <input type="date" id="birthday" required>
+            <input type="submit" value="生成人生轨迹">
+        </form>
+        <div id="loading" style="display: none;">
+            <p>正在为你生成平行宇宙的人生轨迹，请稍候...</p>
+            <div class="spinner"></div>
+        </div>
+        <div id="lifeTrajectory" style="display: none;">
+            <h2>平行宇宙人生轨迹</h2>
+            <p>职业: <span id="occupation"></span></p>
+            <p>成就: <span id="achievement"></span></p>
+            <p>婚姻状况: <span id="maritalStatus"></span></p>
+            <p>财富等级: <span id="wealthLevel"></span></p>
+            <audio id="bgm" controls>
+                <source src="bgm.mp3" type="audio/mpeg">
+                你的浏览器不支持音频播放。
+            </audio>
+        </div>
+        <button id="resetButton" style="display: none;">人生重置</button>
+        <div id="errorMessage" style="display: none; color: red;">
+            <p>请输入有效的生日日期。</p>
+        </div>
+    </div>
+    <script>
+        document.getElementById('birthdayForm').addEventListener('submit', function (e) {
+        e.preventDefault();
+        const birthdayInput = document.getElementById('birthday');
+        const birthday = new Date(birthdayInput.value);
+        if (isNaN(birthday.getTime())) {
+            document.getElementById('errorMessage').style.display = 'block';
+            return;
+        }
+        document.getElementById('errorMessage').style.display = 'none';
+        document.getElementById('loading').style.display = 'block';
+        setTimeout(() => {
+            document.getElementById('loading').style.display = 'none';
+            generateLifeTrajectory();
+            document.getElementById('lifeTrajectory').style.display = 'block';
+            document.getElementById('resetButton').style.display = 'block';
+        }, 2000);
+    });
+    
+    document.getElementById('resetButton').addEventListener('click', function () {
+        document.getElementById('birthday').value = '';
+        document.getElementById('lifeTrajectory').style.display = 'none';
+        document.getElementById('resetButton').style.display = 'none';
+    });
+    
+    function generateLifeTrajectory() {
+        const occupations = ['软件工程师', '医生', '教师', '艺术家', '运动员', '企业家', '记者'];
+        const achievements = ['获得行业大奖', '发表知名学术论文', '创办成功企业', '打破世界纪录', '举办个人画展'];
+        const maritalStatuses = ['已婚', '未婚', '离异'];
+        const wealthLevels = ['富有', '小康', '普通', '贫困'];
+    
+        const randomOccupation = occupations[Math.floor(Math.random() * occupations.length)];
+        const randomAchievement = achievements[Math.floor(Math.random() * achievements.length)];
+        const randomMaritalStatus = maritalStatuses[Math.floor(Math.random() * maritalStatuses.length)];
+        const randomWealthLevel = wealthLevels[Math.floor(Math.random() * wealthLevels.length)];
+    
+        document.getElementById('occupation').textContent = randomOccupation;
+        document.getElementById('achievement').textContent = randomAchievement;
+        document.getElementById('maritalStatus').textContent = randomMaritalStatus;
+        document.getElementById('wealthLevel').textContent = randomWealthLevel;
+    
+        const bgm = document.getElementById('bgm');
+        bgm.src = 'bgm.mp3';
+        bgm.load();
+        bgm.play();
+    }
+      </script>
+</body>
+</html>
+
+
