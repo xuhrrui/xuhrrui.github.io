@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>随机人生模拟器</title>
+    <link rel="stylesheet" href="2.css">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+</head>
+
+<body>
+    <div class="container">
+        <h1>随机人生模拟器</h1>
+        <p class="description">想知道在平行宇宙中你的人生会是怎样的吗？输入你的生日，让我们一起探索吧！</p>
+        <form id="birthdayForm">
+            <label for="birthday">请输入你的生日 (YYYY-MM-DD):</label>
+            <input type="date" id="birthday" required>
+            <input type="submit" value="生成人生轨迹">
+        </form>
+        <div id="loading" style="display: none;">
+            <p>正在为你生成平行宇宙的人生轨迹，请稍候...</p>
+            <div class="spinner"></div>
+        </div>
+        <div id="lifeTrajectory" style="display: none;">
+            <h2>平行宇宙人生轨迹</h2>
+            <p>职业: <span id="occupation"></span></p>
+            <p>成就: <span id="achievement"></span></p>
+            <p>婚姻状况: <span id="maritalStatus"></span></p>
+            <p>财富等级: <span id="wealthLevel"></span></p>
+            <audio id="bgm" controls>
+                <source src="bgm.mp3" type="audio/mpeg">
+                你的浏览器不支持音频播放。
+            </audio>
+        </div>
+        <button id="resetButton" style="display: none;">人生重置</button>
+        <div id="errorMessage" style="display: none; color: red;">
+            <p>请输入有效的生日日期。</p>
+        </div>
+    </div>
+    <script src="3.js"></script>
+</body>
+
+</html>
