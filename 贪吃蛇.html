@@ -170,7 +170,7 @@
         </div>
     </div>
     <div id="score-board">得分: 0</div>
-    <div id="timer">时间: 60</div>
+    <div id="timer">时间: 无限</div>
     <button id="restart-button">再来一局</button>
     <audio id="eat-sound" src="https://www.soundjay.com/button/beep-07.wav" preload="auto"></audio>
     <script>
@@ -185,9 +185,7 @@
         let invincibleStar;
         let direction = 'right';
         let score = 0;
-        let timer = 60;
         let gameInterval;
-        let timerInterval;
         let isAccelerating = false;
         const normalSpeed = 200;
         const acceleratedSpeed = 100;
@@ -482,34 +480,14 @@
             return false;
         }
 
-        function updateTimer() {
-            timer--;
-            timeElapsed++;
-            timerElement.textContent = `时间: ${timer}`;
-            if (timer === 0) {
-                clearInterval(gameInterval);
-                clearInterval(timerInterval);
-                clearInterval(enemySpawnInterval);
-                clearInterval(obstacleSpawnInterval);
-                alert('时间到，游戏结束！得分: ' + score);
-            }
-            if (Math.random() < 0.01 &&!invincibleStar) {
-                invincibleStar = getRandomInvincibleStar();
-            }
-        }
-
         function startGame() {
             snake = [{ x: 13, y: 13 }];
             food = getRandomFood();
             invincibleStar = null;
             direction = 'right';
             score = 0;
-            timer = 60;
-            timeElapsed = 0;
             scoreBoard.textContent = `得分: ${score}`;
-            timerElement.textContent = `时间: ${timer}`;
             clearInterval(gameInterval);
-            clearInterval(timerInterval);
             clearInterval(enemySpawnInterval);
             clearInterval(obstacleSpawnInterval);
             enemySnakes = [];
@@ -527,13 +505,11 @@
                 drawObstacles();
                 if (checkCollision()) {
                     clearInterval(gameInterval);
-                    clearInterval(timerInterval);
                     clearInterval(enemySpawnInterval);
                     clearInterval(obstacleSpawnInterval);
                     alert('游戏结束！得分: ' + score);
                 }
             }, normalSpeed);
-            timerInterval = setInterval(updateTimer, 1000);
             isAccelerating = false;
             enemySpawnInterval = setInterval(spawnEnemySnake, 20000);
             obstacleSpawnInterval = setInterval(spawnObstacle, 60000);
@@ -577,7 +553,6 @@
                     drawObstacles();
                     if (checkCollision()) {
                         clearInterval(gameInterval);
-                        clearInterval(timerInterval);
                         clearInterval(enemySpawnInterval);
                         clearInterval(obstacleSpawnInterval);
                         alert('游戏结束！得分: ' + score);
@@ -597,7 +572,6 @@
                         drawObstacles();
                         if (checkCollision()) {
                             clearInterval(gameInterval);
-                            clearInterval(timerInterval);
                             clearInterval(enemySpawnInterval);
                             clearInterval(obstacleSpawnInterval);
                             alert('游戏结束！得分: ' + score);
@@ -634,4 +608,5 @@
 </body>
 
 </html>
+    
     
