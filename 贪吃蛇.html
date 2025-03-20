@@ -1,0 +1,637 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>贪吃蛇游戏</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            margin: 0;
+            background: linear-gradient(135deg, #f0f0f0 0%, #e0e0e0 100%);
+        }
+
+        #game-container {
+            display: flex;
+            gap: 20px;
+        }
+
+        #game-board {
+            position: relative;
+            width: 520px;
+            height: 520px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .snake-segment {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: #007BFF;
+            border-radius: 5px;
+            transition: all 0.1s ease;
+        }
+
+        .enemy-snake-segment {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: #FF0000;
+            border-radius: 5px;
+            transition: all 0.1s ease;
+        }
+
+        .food {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            border-radius: 50%;
+            box-shadow: 0 0 5px rgba(0, 0, 0, 0.3);
+        }
+
+        .food-type-1 {
+            background-color: #FF5722;
+        }
+
+        .food-type-2 {
+            background-color: #4CAF50;
+        }
+
+        .food-type-3 {
+            background-color: #FFC107;
+        }
+
+        .invincible-star {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background: url('https://dummyimage.com/20x20/ffff00/000000&text=★');
+        }
+
+        .obstacle {
+            position: absolute;
+            width: 20px;
+            height: 20px;
+            background-color: #000;
+        }
+
+        #score-board {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        #timer {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            font-size: 20px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        #restart-button {
+            position: absolute;
+            bottom: 10px;
+            left: 50%;
+            transform: translateX(-50%);
+            padding: 10px 20px;
+            font-size: 16px;
+            cursor: pointer;
+            background-color: #007BFF;
+            color: #fff;
+            border: none;
+            border-radius: 5px;
+            transition: background-color 0.3s ease;
+        }
+
+        #restart-button:hover {
+            background-color: #0056b3;
+        }
+
+        @keyframes flash {
+            0% {
+                background-color: #FFFF00;
+            }
+            100% {
+                background-color: #fff;
+            }
+        }
+
+        #game-board.flash {
+            animation: flash 0.1s linear;
+        }
+
+        @keyframes invincible-effect {
+            0% {
+                opacity: 1;
+            }
+            50% {
+                opacity: 0.3;
+            }
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .snake-segment.invincible {
+            animation: invincible-effect 0.5s infinite;
+        }
+
+        #tutorial {
+            width: 200px;
+            background-color: #fff;
+            border: 1px solid #ccc;
+            padding: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+        }
+    </style>
+</head>
+
+<body>
+    <div id="game-container">
+        <div id="game-board"></div>
+        <div id="tutorial">
+            <h2>操作教程</h2>
+            <p>1. 使用方向键（上、下、左、右）控制蛇的移动方向。</p>
+            <p>2. 按下 Shift 键，蛇消耗自身长度进行 2 秒加速。</p>
+            <p>3. 吃到普通食物可以增加蛇的长度和得分。</p>
+            <p>4. 吃到星形的无敌星，蛇在 8 秒内无敌，并出现无敌特效。</p>
+            <p>5. 避免撞到墙壁、自己的身体、敌方蛇和障碍物，除非处于无敌状态，否则游戏结束。</p>
+        </div>
+    </div>
+    <div id="score-board">得分: 0</div>
+    <div id="timer">时间: 60</div>
+    <button id="restart-button">再来一局</button>
+    <audio id="eat-sound" src="https://www.soundjay.com/button/beep-07.wav" preload="auto"></audio>
+    <script>
+        const gameBoard = document.getElementById('game-board');
+        const scoreBoard = document.getElementById('score-board');
+        const timerElement = document.getElementById('timer');
+        const restartButton = document.getElementById('restart-button');
+        const eatSound = document.getElementById('eat-sound');
+
+        let snake = [{ x: 13, y: 13 }];
+        let food;
+        let invincibleStar;
+        let direction = 'right';
+        let score = 0;
+        let timer = 60;
+        let gameInterval;
+        let timerInterval;
+        let isAccelerating = false;
+        const normalSpeed = 200;
+        const acceleratedSpeed = 100;
+        const accelerationLengthCost = 3;
+        let enemySnakes = [];
+        let enemySpawnInterval;
+        let obstacles = [];
+        let obstacleSpawnInterval;
+        let timeElapsed = 0;
+        let isInvincible = false;
+        let invincibleTimer;
+
+        const foodTypes = [
+            { type: 1, score: 1, length: 1, className: 'food-type-1', chance: 0.5 },
+            { type: 2, score: 2, length: 2, className: 'food-type-2', chance: 0.3 },
+            { type: 3, score: 3, length: 3, className: 'food-type-3', chance: 0.2 }
+        ];
+
+        function getRandomPosition() {
+            return Math.floor(Math.random() * 26);
+        }
+
+        function getRandomFood() {
+            const randomValue = Math.random();
+            let cumulativeChance = 0;
+            for (const foodType of foodTypes) {
+                cumulativeChance += foodType.chance;
+                if (randomValue < cumulativeChance) {
+                    return {
+                        ...foodType,
+                        x: getRandomPosition(),
+                        y: getRandomPosition()
+                    };
+                }
+            }
+            // Fallback to the first food type if something goes wrong
+            return {
+                ...foodTypes[0],
+                x: getRandomPosition(),
+                y: getRandomPosition()
+            };
+        }
+
+        function getRandomInvincibleStar() {
+            return {
+                x: getRandomPosition(),
+                y: getRandomPosition()
+            };
+        }
+
+        function drawSnake() {
+            snake.forEach(segment => {
+                const snakeSegment = document.createElement('div');
+                snakeSegment.classList.add('snake-segment');
+                if (isInvincible) {
+                    snakeSegment.classList.add('invincible');
+                }
+                snakeSegment.style.left = segment.x * 20 + 'px';
+                snakeSegment.style.top = segment.y * 20 + 'px';
+                gameBoard.appendChild(snakeSegment);
+            });
+        }
+
+        function drawEnemySnakes() {
+            enemySnakes.forEach(enemySnake => {
+                enemySnake.body.forEach(segment => {
+                    const enemySegment = document.createElement('div');
+                    enemySegment.classList.add('enemy-snake-segment');
+                    enemySegment.style.left = segment.x * 20 + 'px';
+                    enemySegment.style.top = segment.y * 20 + 'px';
+                    gameBoard.appendChild(enemySegment);
+                });
+            });
+        }
+
+        function drawFood() {
+            const foodElement = document.createElement('div');
+            foodElement.classList.add('food', food.className);
+            foodElement.style.left = food.x * 20 + 'px';
+            foodElement.style.top = food.y * 20 + 'px';
+            gameBoard.appendChild(foodElement);
+        }
+
+        function drawInvincibleStar() {
+            if (invincibleStar) {
+                const starElement = document.createElement('div');
+                starElement.classList.add('invincible-star');
+                starElement.style.left = invincibleStar.x * 20 + 'px';
+                starElement.style.top = invincibleStar.y * 20 + 'px';
+                gameBoard.appendChild(starElement);
+            }
+        }
+
+        function drawObstacles() {
+            obstacles.forEach(obstacle => {
+                const obstacleElement = document.createElement('div');
+                obstacleElement.classList.add('obstacle');
+                obstacleElement.style.left = obstacle.x * 20 + 'px';
+                obstacleElement.style.top = obstacle.y * 20 + 'px';
+                gameBoard.appendChild(obstacleElement);
+            });
+        }
+
+        function moveSnake() {
+            const head = { ...snake[0] };
+            switch (direction) {
+                case 'up':
+                    head.y--;
+                    break;
+                case 'down':
+                    head.y++;
+                    break;
+                case 'left':
+                    head.x--;
+                    break;
+                case 'right':
+                    head.x++;
+                    break;
+            }
+            snake.unshift(head);
+            if (head.x === food.x && head.y === food.y) {
+                score += food.score;
+                scoreBoard.textContent = `得分: ${score}`;
+                for (let i = 0; i < food.length; i++) {
+                    snake.push({...snake[snake.length - 1] });
+                }
+                food = getRandomFood();
+                eatSound.play();
+                flashEffect();
+            } else if (invincibleStar && head.x === invincibleStar.x && head.y === invincibleStar.y) {
+                isInvincible = true;
+                clearTimeout(invincibleTimer);
+                invincibleTimer = setTimeout(() => {
+                    isInvincible = false;
+                    const snakeSegments = document.querySelectorAll('.snake-segment');
+                    snakeSegments.forEach(segment => {
+                        segment.classList.remove('invincible');
+                    });
+                    invincibleStar = null;
+                }, 8000);
+                invincibleStar = null;
+                eatSound.play();
+                flashEffect();
+            } else {
+                snake.pop();
+            }
+        }
+
+        function moveEnemySnakes() {
+            enemySnakes.forEach((enemySnake, index) => {
+                let target;
+                if (timeElapsed < 60) {
+                    target = food;
+                } else {
+                    target = snake[0];
+                }
+                const head = { ...enemySnake.body[0] };
+                let newDirection;
+                if (target.x > head.x) {
+                    newDirection = 'right';
+                } else if (target.x < head.x) {
+                    newDirection = 'left';
+                } else if (target.y > head.y) {
+                    newDirection = 'down';
+                } else if (target.y < head.y) {
+                    newDirection = 'up';
+                }
+                if ((newDirection === 'up' && enemySnake.direction === 'down') ||
+                    (newDirection === 'down' && enemySnake.direction === 'up') ||
+                    (newDirection === 'left' && enemySnake.direction === 'right') ||
+                    (newDirection === 'right' && enemySnake.direction === 'left')) {
+                    const directions = ['up', 'down', 'left', 'right'];
+                    do {
+                        newDirection = directions[Math.floor(Math.random() * directions.length)];
+                    } while ((newDirection === 'up' && enemySnake.direction === 'down') ||
+                        (newDirection === 'down' && enemySnake.direction === 'up') ||
+                        (newDirection === 'left' && enemySnake.direction === 'right') ||
+                        (newDirection === 'right' && enemySnake.direction === 'left'));
+                }
+                enemySnake.direction = newDirection;
+                switch (newDirection) {
+                    case 'up':
+                        head.y--;
+                        break;
+                    case 'down':
+                        head.y++;
+                        break;
+                    case 'left':
+                        head.x--;
+                        break;
+                    case 'right':
+                        head.x++;
+                        break;
+                }
+                enemySnake.body.unshift(head);
+                if (head.x === food.x && head.y === food.y) {
+                    for (let i = 0; i < food.length; i++) {
+                        enemySnake.body.push({...enemySnake.body[enemySnake.body.length - 1] });
+                    }
+                    food = getRandomFood();
+                    eatSound.play();
+                    flashEffect();
+                } else {
+                    enemySnake.body.pop();
+                }
+                if (checkEnemyCollision(index)) {
+                    leaveFoodFromEnemy(enemySnake);
+                    enemySnakes.splice(index, 1);
+                }
+            });
+        }
+
+        function leaveFoodFromEnemy(enemySnake) {
+            const foodValue = enemySnake.body.length;
+            const foodIndex = Math.min(foodValue - 1, 2);
+            food = {
+                ...foodTypes[foodIndex],
+                x: enemySnake.body[0].x,
+                y: enemySnake.body[0].y
+            };
+        }
+
+        function flashEffect() {
+            gameBoard.classList.add('flash');
+            setTimeout(() => {
+                gameBoard.classList.remove('flash');
+            }, 100);
+        }
+
+        function checkCollision() {
+            const head = snake[0];
+            if (head.x < 0 || head.x >= 26 || head.y < 0 || head.y >= 26) {
+                return!isInvincible;
+            }
+            for (let i = 1; i < snake.length; i++) {
+                if (head.x === snake[i].x && head.y === snake[i].y) {
+                    return!isInvincible;
+                }
+            }
+            for (let i = 0; i < enemySnakes.length; i++) {
+                const enemy = enemySnakes[i];
+                for (let j = 0; j < enemy.body.length; j++) {
+                    if (head.x === enemy.body[j].x && head.y === enemy.body[j].y) {
+                        return!isInvincible;
+                    }
+                }
+            }
+            for (let i = 0; i < obstacles.length; i++) {
+                const obstacle = obstacles[i];
+                if (head.x === obstacle.x && head.y === obstacle.y) {
+                    return!isInvincible;
+                }
+            }
+            return false;
+        }
+
+        function checkEnemyCollision(enemyIndex) {
+            const enemy = enemySnakes[enemyIndex];
+            const enemyHead = enemy.body[0];
+            if (enemyHead.x < 0 || enemyHead.x >= 26 || enemyHead.y < 0 || enemyHead.y >= 26) {
+                return true;
+            }
+            for (let i = 1; i < enemy.body.length; i++) {
+                if (enemyHead.x === enemy.body[i].x && enemyHead.y === enemy.body[i].y) {
+                    return true;
+                }
+            }
+            if (enemyHead.x === snake[0].x && enemyHead.y === snake[0].y) {
+                return!isInvincible;
+            }
+            for (let i = 1; i < snake.length; i++) {
+                if (enemyHead.x === snake[i].x && enemyHead.y === snake[i].y) {
+                    return true;
+                }
+            }
+            for (let i = 0; i < enemySnakes.length; i++) {
+                if (i!== enemyIndex) {
+                    const otherEnemy = enemySnakes[i];
+                    for (let j = 0; j < otherEnemy.body.length; j++) {
+                        if (enemyHead.x === otherEnemy.body[j].x && enemyHead.y === otherEnemy.body[j].y) {
+                            return true;
+                        }
+                    }
+                }
+            }
+            for (let i = 0; i < obstacles.length; i++) {
+                const obstacle = obstacles[i];
+                if (enemyHead.x === obstacle.x && enemyHead.y === obstacle.y) {
+                    return true;
+                }
+            }
+            return false;
+        }
+
+        function updateTimer() {
+            timer--;
+            timeElapsed++;
+            timerElement.textContent = `时间: ${timer}`;
+            if (timer === 0) {
+                clearInterval(gameInterval);
+                clearInterval(timerInterval);
+                clearInterval(enemySpawnInterval);
+                clearInterval(obstacleSpawnInterval);
+                alert('时间到，游戏结束！得分: ' + score);
+            }
+            if (Math.random() < 0.01 &&!invincibleStar) {
+                invincibleStar = getRandomInvincibleStar();
+            }
+        }
+
+        function startGame() {
+            snake = [{ x: 13, y: 13 }];
+            food = getRandomFood();
+            invincibleStar = null;
+            direction = 'right';
+            score = 0;
+            timer = 60;
+            timeElapsed = 0;
+            scoreBoard.textContent = `得分: ${score}`;
+            timerElement.textContent = `时间: ${timer}`;
+            clearInterval(gameInterval);
+            clearInterval(timerInterval);
+            clearInterval(enemySpawnInterval);
+            clearInterval(obstacleSpawnInterval);
+            enemySnakes = [];
+            obstacles = [];
+            isInvincible = false;
+            clearTimeout(invincibleTimer);
+            gameInterval = setInterval(() => {
+                gameBoard.innerHTML = '';
+                moveSnake();
+                moveEnemySnakes();
+                drawSnake();
+                drawEnemySnakes();
+                drawFood();
+                drawInvincibleStar();
+                drawObstacles();
+                if (checkCollision()) {
+                    clearInterval(gameInterval);
+                    clearInterval(timerInterval);
+                    clearInterval(enemySpawnInterval);
+                    clearInterval(obstacleSpawnInterval);
+                    alert('游戏结束！得分: ' + score);
+                }
+            }, normalSpeed);
+            timerInterval = setInterval(updateTimer, 1000);
+            isAccelerating = false;
+            enemySpawnInterval = setInterval(spawnEnemySnake, 20000);
+            obstacleSpawnInterval = setInterval(spawnObstacle, 60000);
+        }
+
+        function spawnEnemySnake() {
+            const startX = getRandomPosition();
+            const startY = getRandomPosition();
+            const directions = ['up', 'down', 'left', 'right'];
+            const randomDirection = directions[Math.floor(Math.random() * directions.length)];
+            const enemySnake = {
+                body: [{ x: startX, y: startY }],
+                direction: randomDirection
+            };
+            enemySnakes.push(enemySnake);
+        }
+
+        function spawnObstacle() {
+            const obstacle = {
+                x: getRandomPosition(),
+                y: getRandomPosition()
+            };
+            obstacles.push(obstacle);
+        }
+
+        function accelerate() {
+            if (snake.length > accelerationLengthCost &&!isAccelerating) {
+                isAccelerating = true;
+                for (let i = 0; i < accelerationLengthCost; i++) {
+                    snake.pop();
+                }
+                clearInterval(gameInterval);
+                gameInterval = setInterval(() => {
+                    gameBoard.innerHTML = '';
+                    moveSnake();
+                    moveEnemySnakes();
+                    drawSnake();
+                    drawEnemySnakes();
+                    drawFood();
+                    drawInvincibleStar();
+                    drawObstacles();
+                    if (checkCollision()) {
+                        clearInterval(gameInterval);
+                        clearInterval(timerInterval);
+                        clearInterval(enemySpawnInterval);
+                        clearInterval(obstacleSpawnInterval);
+                        alert('游戏结束！得分: ' + score);
+                    }
+                }, acceleratedSpeed);
+                setTimeout(() => {
+                    isAccelerating = false;
+                    clearInterval(gameInterval);
+                    gameInterval = setInterval(() => {
+                        gameBoard.innerHTML = '';
+                        moveSnake();
+                        moveEnemySnakes();
+                        drawSnake();
+                        drawEnemySnakes();
+                        drawFood();
+                        drawInvincibleStar();
+                        drawObstacles();
+                        if (checkCollision()) {
+                            clearInterval(gameInterval);
+                            clearInterval(timerInterval);
+                            clearInterval(enemySpawnInterval);
+                            clearInterval(obstacleSpawnInterval);
+                            alert('游戏结束！得分: ' + score);
+                        }
+                    }, normalSpeed);
+                }, 2000);
+            }
+        }
+
+        document.addEventListener('keydown', function (event) {
+            switch (event.key) {
+                case 'ArrowUp':
+                    if (direction!== 'down') direction = 'up';
+                    break;
+                case 'ArrowDown':
+                    if (direction!== 'up') direction = 'down';
+                    break;
+                case 'ArrowLeft':
+                    if (direction!== 'right') direction = 'left';
+                    break;
+                case 'ArrowRight':
+                    if (direction!== 'left') direction = 'right';
+                    break;
+                case 'Shift':
+                    accelerate();
+                    break;
+            }
+        });
+
+        restartButton.addEventListener('click', startGame);
+
+        startGame();
+    </script>
+</body>
+
+</html>
+    
