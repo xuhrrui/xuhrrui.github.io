@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>HTML+CSS代码练习</title>
+    <style>
+        body {
+            display: flex;
+            margin: 0;
+            height: 100vh;
+        }
+
+        .editor-container {
+            width: 50%;
+            height: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+        }
+
+        #editor {
+            width: 100%;
+            height: calc(100% - 80px);
+            resize: none;
+        }
+
+        .button-container {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            padding: 10px;
+        }
+
+        button {
+            padding: 10px 20px;
+            font-size: 16px;
+            margin: 5px 0;
+        }
+
+        .output-container {
+            width: 50%;
+            height: 100%;
+            box-sizing: border-box;
+            padding: 10px;
+        }
+
+        #output {
+            width: 100%;
+            height: 100%;
+            border: 1px solid #ccc;
+        }
+    </style>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ace.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/mode-html.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/theme-monokai.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/theme-github.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/ace/1.4.12/ext-language_tools.js"></script>
+</head>
+
+<body>
+    <div class="editor-container">
+        <div id="editor"></div>
+        <button id="reset-button">重置</button>
+        <button id="toggle-theme-button">切换主题</button>
+    </div>
+    <div class="button-container">
+        <button id="run-button">运行</button>
+    </div>
+    <div class="output-container">
+        <iframe id="output"></iframe>
+    </div>
+    <script>
+        const editor = ace.edit("editor");
+        let currentTheme = "ace/theme/monokai";
+        editor.setTheme(currentTheme);
+        editor.session.setMode("ace/mode/html");
+
+        // 启用自动补全功能
+        ace.require("ace/ext/language_tools");
+        editor.setOptions({
+            enableBasicAutocompletion: true,
+            enableSnippets: true,
+            enableLiveAutocompletion: true
+        });
+
+        // 自动保存代码
+        const savedCode = localStorage.getItem('editorCode');
+        if (savedCode) {
+            editor.setValue(savedCode);
+        }
+
+        editor.on('change', function () {
+            localStorage.setItem('editorCode', editor.getValue());
+            // 实时更新预览
+            const code = editor.getValue();
+            const outputDoc = output.contentDocument || output.contentWindow.document;
+            outputDoc.open();
+            outputDoc.write(code);
+            outputDoc.close();
+        });
+
+        const runButton = document.getElementById('run-button');
+        const output = document.getElementById('output');
+        const resetButton = document.getElementById('reset-button');
+        const toggleThemeButton = document.getElementById('toggle-theme-button');
+
+        runButton.addEventListener('click', () => {
+            const code = editor.getValue();
+            const outputDoc = output.contentDocument || output.contentWindow.document;
+            outputDoc.open();
+            outputDoc.write(code);
+            outputDoc.close();
+        });
+
+        resetButton.addEventListener('click', () => {
+            editor.setValue('');
+            localStorage.removeItem('editorCode');
+        });
+
+        toggleThemeButton.addEventListener('click', () => {
+            currentTheme = currentTheme === "ace/theme/monokai" ? "ace/theme/github" : "ace/theme/monokai";
+            editor.setTheme(currentTheme);
+        });
+    </script>
+</body>
+
+</html> 
