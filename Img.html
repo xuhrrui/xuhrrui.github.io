@@ -1,0 +1,518 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.7.2/css/all.min.css" rel="stylesheet">
+    <title>动态图片展示</title>
+    <style>
+        body {
+            font-family: 'Inter', sans-serif;
+            margin: 0;
+        }
+
+        nav {
+            background-color: #333;
+            color: white;
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .search-container {
+            display: flex;
+        }
+
+        #search-input {
+            padding: 8px;
+            border: none;
+            border-radius: 4px 0 0 4px;
+            color: black;
+        }
+
+        #search-button {
+            padding: 8px 16px;
+            background-color: #007BFF;
+            color: white;
+            border: none;
+            border-radius: 0 4px 4px 0;
+            cursor: pointer;
+        }
+
+        #toggle-favorites {
+            background: none;
+            border: none;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+        }
+
+        .masonry {
+            column-count: 3;
+            column-gap: 16px;
+            padding: 16px;
+        }
+
+        .masonry-item {
+            display: inline-block;
+            width: 100%;
+            margin-bottom: 16px;
+            break-inside: avoid;
+            position: relative;
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            transition: transform 0.2s ease-in-out;
+        }
+
+        .masonry-item:hover {
+            transform: scale(1.03);
+        }
+
+        .skeleton {
+            background-color: #e2e8f0;
+            border-radius: 8px;
+            width: 100%;
+            height: 200px;
+            animation: pulse 1.5s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 0.6;
+            }
+            50% {
+                opacity: 0.8;
+            }
+            100% {
+                opacity: 0.6;
+            }
+        }
+
+        .loading {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(255, 255, 255, 0.8);
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            z-index: 1;
+        }
+
+        @media (max-width: 768px) {
+            .masonry {
+                column-count: 2;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .masonry {
+                column-count: 1;
+            }
+        }
+
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0, 0, 0, 0.8);
+            animation: fadeIn 0.3s;
+        }
+
+        .modal-content {
+            margin: 10% auto;
+            display: block;
+            width: 80%;
+            max-width: 700px;
+            animation: zoomIn 0.3s;
+        }
+
+        .close {
+            position: absolute;
+            top: 15px;
+            right: 35px;
+            color: #f1f1f1;
+            font-size: 40px;
+            font-weight: bold;
+            transition: 0.3s;
+        }
+
+        .close:hover,
+        .close:focus {
+            color: #bbb;
+            text-decoration: none;
+            cursor: pointer;
+        }
+
+        @keyframes fadeIn {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        @keyframes zoomIn {
+            from {
+                transform: scale(0);
+            }
+            to {
+                transform: scale(1);
+            }
+        }
+
+        .favorite-icon {
+            position: absolute;
+            top: 8px;
+            right: 8px;
+            color: white;
+            font-size: 24px;
+            cursor: pointer;
+            text-shadow: 0 0 4px rgba(0, 0, 0, 0.5);
+            transition: color 0.2s ease-in-out;
+        }
+
+        .favorite-icon.favorite {
+            color: red;
+        }
+
+        #favorite-sidebar {
+            position: fixed;
+            top: 0;
+            right: -300px;
+            width: 300px;
+            height: 100%;
+            background-color: white;
+            box-shadow: -2px 0 4px rgba(0, 0, 0, 0.1);
+            transition: right 0.3s ease-in-out;
+            z-index: 99;
+            padding: 16px;
+            overflow-y: auto;
+        }
+
+        #favorite-sidebar.open {
+            right: 0;
+        }
+
+        .favorite-masonry {
+            column-count: 1;
+            column-gap: 16px;
+        }
+    </style>
+</head>
+
+<body>
+    <nav>
+        <h1 class="text-2xl font-bold">动态图片展示</h1>
+        <div class="search-container">
+            <input type="text" id="search-input" class="border border-gray-300 rounded p-2 w-full"
+                placeholder="搜索图片名称">
+            <button id="search-button"
+                class="bg-blue-500 hover:bg-blue-600 text-white rounded p-2 ml-2">搜索</button>
+        </div>
+        <button id="toggle-favorites"><i class="fa-regular fa-heart"></i></button>
+    </nav>
+    <div class="masonry" id="masonry-container"></div>
+    <div id="error-message" class="text-red-500 mt-4 hidden p-4"></div>
+    <div id="loading-indicator" class="flex justify-center mt-4 hidden p-4">
+        <i class="fa-solid fa-spinner fa-spin text-2xl"></i>
+    </div>
+    <div id="favorite-sidebar">
+        <h2 class="text-2xl font-bold mb-2">收藏的图片</h2>
+        <span id="close-favorites" class="fa-solid fa-xmark float-right cursor-pointer"></span>
+        <div class="favorite-masonry" id="favorite-container"></div>
+    </div>
+    <div id="image-modal" class="modal">
+        <span class="close">&times;</span>
+        <img class="modal-content" id="modal-image">
+    </div>
+    <script>
+        const container = document.getElementById('masonry-container');
+        const errorMessage = document.getElementById('error-message');
+        const imageUrls = [];
+        let isFetching = false;
+        let nextPage = 1;
+        let throttleTimer;
+        const loadingIndicator = document.getElementById('loading-indicator');
+        const modal = document.getElementById('image-modal');
+        const modalImage = document.getElementById('modal-image');
+        const closeBtn = document.querySelector('.close');
+        const searchInput = document.getElementById('search-input');
+        const searchButton = document.getElementById('search-button');
+        const favoriteContainer = document.getElementById('favorite-container');
+        const favorites = [];
+        const toggleFavorites = document.getElementById('toggle-favorites');
+        const favoriteSidebar = document.getElementById('favorite-sidebar');
+        const closeFavorites = document.getElementById('close-favorites');
+
+        async function fetchDogImage() {
+            try {
+                const response = await fetch('https://dog.ceo/api/breeds/image/random');
+                if (!response.ok) {
+                    throw new Error(`请求狗狗图片失败，状态码: ${response.status}`);
+                }
+                const data = await response.json();
+                const breed = data.message.split('/')[4];
+                const lowResUrl = data.message.replace('/large/', '/small/'); 
+                return { url: data.message, lowResUrl, name: `狗狗 - ${breed}`, source: 'https://dog.ceo/api' };
+            } catch (error) {
+                showErrorMessage(`获取狗狗图片时出错: ${error.message}`);
+                return null;
+            }
+        }
+
+        async function fetchPicsumImage() {
+            try {
+                const lowResUrl = 'https://picsum.photos/50';
+                const response = await fetch('https://picsum.photos/200');
+                if (!response.ok) {
+                    throw new Error(`请求风景图片失败，状态码: ${response.status}`);
+                }
+                const blob = await response.blob();
+                const url = URL.createObjectURL(blob);
+                const id = url.split('/').pop();
+                return { url, lowResUrl, name: `风景 - ${id}`, source: 'https://picsum.photos' };
+            } catch (error) {
+                showErrorMessage(`获取风景图片时出错: ${error.message}`);
+                return null;
+            }
+        }
+
+        async function fetchCatImages() {
+            try {
+                const response = await fetch(`https://api.thecatapi.com/v1/images/search?limit=2&page=${nextPage}`);
+                if (!response.ok) {
+                    throw new Error(`请求猫咪图片失败，状态码: ${response.status}`);
+                }
+                const data = await response.json();
+                nextPage++;
+                return data.map(item => ({ 
+                    url: item.url, 
+                    lowResUrl: item.url.replace('/full/', '/thumb/'), 
+                    name: `猫咪 - ${item.id}`, 
+                    source: 'https://api.thecatapi.com' 
+                }));
+            } catch (error) {
+                showErrorMessage(`获取猫咪图片时出错: ${error.message}`);
+                return [];
+            }
+        }
+
+        async function fetchAllImages() {
+            if (isFetching) return;
+            isFetching = true;
+            loadingIndicator.classList.remove('hidden');
+            try {
+                const [dogImage, picsumImage, catImages] = await Promise.all([
+                    fetchDogImage(),
+                    fetchPicsumImage(),
+                    fetchCatImages()
+                ]);
+                const newImages = [];
+                if (dogImage) newImages.push(dogImage);
+                if (picsumImage) newImages.push(picsumImage);
+                newImages.push(...catImages);
+                imageUrls.push(...newImages);
+                renderNewImages(newImages);
+            } catch (error) {
+                showErrorMessage(`图片加载过程中出现未知错误: ${error.message}`);
+            } finally {
+                isFetching = false;
+                loadingIndicator.classList.add('hidden');
+            }
+        }
+
+        function shuffleArray(array) {
+            for (let i = array.length - 1; i > 0; i--) {
+                const j = Math.floor(Math.random() * (i + 1));
+                [array[i], array[j]] = [array[j], array[i]];
+            }
+        }
+
+        function renderNewImages(newImages) {
+            newImages.forEach(imageData => {
+                const item = document.createElement('div');
+                item.classList.add('masonry-item');
+
+                const skeleton = document.createElement('div');
+                skeleton.classList.add('skeleton');
+                item.appendChild(skeleton);
+
+                const img = document.createElement('img');
+                img.src = imageData.lowResUrl;
+                img.alt = imageData.name;
+                img.classList.add('w-full', 'opacity-0', 'transition-opacity', 'duration-500');
+                img.style.display = 'none';
+                img.loading = 'lazy';
+
+                const highResImg = new Image();
+                highResImg.src = imageData.url;
+                highResImg.onload = () => {
+                    skeleton.remove();
+                    img.src = imageData.url;
+                    img.style.display = 'block';
+                    img.classList.remove('opacity-0');
+                };
+                highResImg.onerror = () => {
+                    showErrorMessage(`图片加载失败: ${imageData.name}`);
+                    item.remove();
+                };
+
+                img.addEventListener('click', () => {
+                    openModal(imageData.url);
+                });
+                item.appendChild(img);
+
+                const info = document.createElement('div');
+                info.classList.add('p-4', 'bg-white');
+                const name = document.createElement('p');
+                name.classList.add('font-bold');
+                name.textContent = imageData.name;
+                const source = document.createElement('p');
+                source.classList.add('text-gray-600');
+                source.textContent = `来源: ${imageData.source}`;
+                info.appendChild(name);
+                info.appendChild(source);
+                item.appendChild(info);
+
+                const favoriteIcon = document.createElement('i');
+                favoriteIcon.classList.add('favorite-icon', 'fa-regular', 'fa-heart');
+                favoriteIcon.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleFavorite(imageData, favoriteIcon);
+                });
+                if (favorites.some(fav => fav.url === imageData.url)) {
+                    favoriteIcon.classList.add('favorite', 'fa-solid');
+                }
+                item.appendChild(favoriteIcon);
+
+                container.appendChild(item);
+            });
+        }
+
+        function showErrorMessage(message) {
+            errorMessage.textContent = message;
+            errorMessage.classList.remove('hidden');
+            setTimeout(() => {
+                errorMessage.classList.add('hidden');
+            }, 5000);
+        }
+
+        function throttle(func, time) {
+            if (throttleTimer) return;
+            throttleTimer = setTimeout(() => {
+                func();
+                throttleTimer = null;
+            }, time);
+        }
+
+        function openModal(imgSrc) {
+            modal.style.display = 'block';
+            modalImage.src = imgSrc;
+        }
+
+        closeBtn.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        window.addEventListener('scroll', () => {
+            throttle(() => {
+                if (window.innerHeight + window.scrollY >= document.body.offsetHeight - 500) {
+                    fetchAllImages();
+                }
+            }, 300);
+        });
+
+        searchButton.addEventListener('click', () => {
+            container.innerHTML = '';
+            const filteredImages = imageUrls.filter(image => 
+                image.name.toLowerCase().includes(searchInput.value.toLowerCase())
+            );
+            renderNewImages(filteredImages);
+        });
+
+        function toggleFavorite(imageData, icon) {
+            const index = favorites.findIndex(fav => fav.url === imageData.url);
+            if (index === -1) {
+                favorites.push(imageData);
+                icon.classList.add('favorite', 'fa-solid');
+            } else {
+                favorites.splice(index, 1);
+                icon.classList.remove('favorite', 'fa-solid');
+            }
+            renderFavorites();
+        }
+
+        function renderFavorites() {
+            favoriteContainer.innerHTML = '';
+            favorites.forEach(imageData => {
+                const item = document.createElement('div');
+                item.classList.add('masonry-item');
+
+                const img = document.createElement('img');
+                img.src = imageData.url;
+                img.alt = imageData.name;
+                img.classList.add('w-full');
+                item.appendChild(img);
+
+                const info = document.createElement('div');
+                info.classList.add('p-4', 'bg-white');
+                const name = document.createElement('p');
+                name.classList.add('font-bold');
+                name.textContent = imageData.name;
+                const source = document.createElement('p');
+                source.classList.add('text-gray-600');
+                source.textContent = `来源: ${imageData.source}`;
+                info.appendChild(name);
+                info.appendChild(source);
+                item.appendChild(info);
+
+                const favoriteIcon = document.createElement('i');
+                favoriteIcon.classList.add('favorite-icon', 'fa-solid', 'fa-heart', 'favorite');
+                favoriteIcon.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    toggleFavorite(imageData, favoriteIcon);
+                });
+                item.appendChild(favoriteIcon);
+
+                favoriteContainer.appendChild(item);
+            });
+        }
+
+        toggleFavorites.addEventListener('click', () => {
+            favoriteSidebar.classList.toggle('open');
+            toggleFavorites.classList.toggle('fa-solid');
+            toggleFavorites.classList.toggle('fa-regular');
+        });
+
+        closeFavorites.addEventListener('click', () => {
+            favoriteSidebar.classList.remove('open');
+            toggleFavorites.classList.remove('fa-solid');
+            toggleFavorites.classList.add('fa-regular');
+        });
+
+        fetchAllImages();
+    </script>
+</body>
+
+</html>
+    
+    
